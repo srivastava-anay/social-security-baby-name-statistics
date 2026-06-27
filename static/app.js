@@ -126,6 +126,9 @@ async function loadPopularity() {
   });
   activePayload = payload;
   render(payload);
+  loadPopularityRanking(payload).catch((error) => {
+    console.error(error);
+  });
 }
 
 async function popularityPayload({ rawName, region, state, mode, yearRange }) {
@@ -135,22 +138,20 @@ async function popularityPayload({ rawName, region, state, mode, yearRange }) {
 
   const nameKeys = names.map((name) => name.toLowerCase());
   const stateCode = state.toUpperCase();
-  const counts = region === "state" ? await stateCounts(stateCode, nameKeys) : await nationalCounts(nameKeys);
-  const popularity = names.length > 1
-    ? { multipleNames: true }
-    : region === "state"
-      ? await statePopularity(stateCode, nameKeys[0])
-      : await nationalPopularity(nameKeys[0]);
+  const counts = region === "state" ? await stateCounts(stateCode, nameKeys, yearRange) : await nationalCounts(nameKeys, yearRange);
   return {
     name: names.join(", "),
     names,
+    nameKeys,
     isAggregate: names.length > 1,
+    region,
+    state: stateCode,
     source: region === "state" ? `${STATE_NAMES[stateCode] || stateCode} (${stateCode})` : "United States",
     range: yearRange,
     mode,
     lines: linesFor(counts, mode, yearRange),
     summary: summarize(counts, mode, yearRange),
-    popularity,
+    popularity: names.length > 1 ? { multipleNames: true } : { loading: true },
     note: NOTE,
   };
 }
@@ -181,11 +182,11 @@ function emptyYears() {
   return counts;
 }
 
-async function nationalCounts(nameKeys) {
+async function nationalCounts(nameKeys, yearRange) {
   const counts = emptyYears();
   const keySet = new Set(nameKeys);
   await Promise.all(
-    Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, index) => START_YEAR + index).map(async (year) => {
+    Array.from({ length: yearRange.end - yearRange.start + 1 }, (_, index) => yearRange.start + index).map(async (year) => {
       const text = await fetchText(`names/yob${year}.txt`, NATIONAL_CACHE);
       parseNationalYear(text, year, keySet, counts);
     }),
@@ -193,12 +194,12 @@ async function nationalCounts(nameKeys) {
   return counts;
 }
 
-async function stateCounts(state, nameKeys) {
+async function stateCounts(state, nameKeys, yearRange) {
   if (!STATE_NAMES[state]) throw new Error("Please choose a valid state.");
   const counts = emptyYears();
   const keySet = new Set(nameKeys);
   const text = await fetchText(`namesbystate/${state}.TXT`, STATE_CACHE);
-  parseStateFile(text, keySet, counts);
+  parseStateFile(text, keySet, counts, yearRange);
   return counts;
 }
 
@@ -283,12 +284,12 @@ function parseNationalYear(text, year, nameKeys, counts) {
   });
 }
 
-function parseStateFile(text, nameKeys, counts) {
+function parseStateFile(text, nameKeys, counts, yearRange) {
   text.split(/\r?\n/).forEach((line) => {
     if (!line) return;
     const [, sex, yearText, name, births] = line.split(",");
     const year = Number(yearText);
-    if (year >= START_YEAR && year <= END_YEAR && nameKeys.has(name.toLowerCase())) {
+    if (year >= yearRange.start && year <= yearRange.end && nameKeys.has(name.toLowerCase())) {
       counts[year][sex] += Number(births);
     }
   });
@@ -366,12 +367,30 @@ function render(payload) {
   drawChart(payload);
 }
 
+async function loadPopularityRanking(payload) {
+  if (payload.isAggregate) {
+    renderPopularity({ multipleNames: true });
+    return;
+  }
+  const popularity = payload.region === "state"
+    ? await statePopularity(payload.state, payload.nameKeys[0])
+    : await nationalPopularity(payload.nameKeys[0]);
+  if (activePayload !== payload) return;
+  payload.popularity = popularity;
+  renderPopularity(popularity);
+}
+
 function renderPopularity(popularity) {
   const card = document.querySelector("#popularityCard");
   card.classList.toggle("is-not-applicable", popularity.multipleNames);
   document.querySelector("#popularityDetails").hidden = popularity.multipleNames;
   document.querySelector("#popularityNotApplicable").hidden = !popularity.multipleNames;
   if (popularity.multipleNames) return;
+  if (popularity.loading) {
+    document.querySelector("#femalePopularity").textContent = "...";
+    document.querySelector("#malePopularity").textContent = "...";
+    return;
+  }
   document.querySelector("#femalePopularity").textContent = popularityText(popularity.female);
   document.querySelector("#malePopularity").textContent = popularityText(popularity.male);
 }
