@@ -13,7 +13,7 @@
           <span class="brand-mark" aria-hidden="true"></span>
           <div>
             <h1>Name Popularity</h1>
-            <p>Social Security baby name counts, 1980-2025</p>
+            <p>Social Security baby name counts, 1910-2025</p>
           </div>
         </div>
 
@@ -34,16 +34,6 @@
           <label class="field state-field" id="stateField">
             <span>State</span>
             <select id="stateSelect" name="state"></select>
-          </label>
-
-          <label class="field compact-field">
-            <span>Start year</span>
-            <input id="startYearInput" name="startYear" type="number" min="1980" max="2025" value="1985" required>
-          </label>
-
-          <label class="field compact-field">
-            <span>End year</span>
-            <input id="endYearInput" name="endYear" type="number" min="1980" max="2025" value="2025" required>
           </label>
 
           <fieldset class="mode-control">
@@ -76,7 +66,19 @@
             <h2 id="chartTitle">Loading...</h2>
             <p id="chartSubtitle"></p>
           </div>
-          <div class="legend" id="legend"></div>
+          <div class="chart-tools">
+            <form id="yearFilters" class="year-filters" aria-label="Year range">
+              <label class="field compact-field">
+                <span>Start year</span>
+                <input id="startYearInput" name="startYear" type="number" min="1910" max="2025" value="1985" required>
+              </label>
+              <label class="field compact-field">
+                <span>End year</span>
+                <input id="endYearInput" name="endYear" type="number" min="1910" max="2025" value="2025" required>
+              </label>
+            </form>
+            <div class="legend" id="legend"></div>
+          </div>
         </div>
         <div class="canvas-wrap">
           <canvas id="chart" width="1200" height="560" aria-label="Name popularity chart" role="img"></canvas>

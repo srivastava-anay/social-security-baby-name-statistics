@@ -2,6 +2,7 @@ const stateField = document.querySelector("#stateField");
 const stateSelect = document.querySelector("#stateSelect");
 const regionSelect = document.querySelector("#regionSelect");
 const filters = document.querySelector("#filters");
+const yearFilters = document.querySelector("#yearFilters");
 const chart = document.querySelector("#chart");
 const ctx = chart.getContext("2d");
 const tooltip = document.querySelector("#tooltip");
@@ -10,7 +11,7 @@ const colors = {
   female: "#b84d80",
   male: "#2f6fbb",
 };
-const START_YEAR = 1980;
+const START_YEAR = 1910;
 const END_YEAR = 2025;
 const NOTE = "SSA data omits names with fewer than 5 births in a sex/year/region.";
 const ASSET_ROOT = location.pathname.includes("/static/") ? ".." : ".";
@@ -72,6 +73,7 @@ const STATE_CACHE = new Map();
 
 let activePayload = null;
 let activeLayout = null;
+let yearUpdateTimer = null;
 
 function numberFormat(value) {
   return new Intl.NumberFormat("en-US").format(value);
@@ -114,7 +116,7 @@ async function loadStates() {
 
 async function loadPopularity() {
   const form = new FormData(filters);
-  const yearRange = selectedYearRange(form);
+  const yearRange = selectedYearRange(new FormData(yearFilters));
   const payload = await popularityPayload({
     rawName: form.get("name"),
     region: form.get("region"),
@@ -472,10 +474,7 @@ function drawGrid({ width, height, pad, plotWidth, plotHeight, yMax, yFor, xFor,
 
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  const baseXTicks = width < 520 ? [yearStart, 1995, 2010, yearEnd] : [yearStart, 1990, 2000, 2010, 2020, yearEnd];
-  const xTicks = baseXTicks.filter(
-    (year, index, list) => year >= yearStart && year <= yearEnd && list.indexOf(year) === index,
-  );
+  const xTicks = yearTicks(yearStart, yearEnd, width < 520 ? 4 : 7);
   xTicks.forEach((year) => {
     const x = xFor(year);
     ctx.beginPath();
@@ -491,6 +490,29 @@ function drawGrid({ width, height, pad, plotWidth, plotHeight, yMax, yFor, xFor,
   ctx.lineTo(pad.left, pad.top + plotHeight);
   ctx.lineTo(pad.left + plotWidth, pad.top + plotHeight);
   ctx.stroke();
+}
+
+function yearTicks(start, end, maxTicks) {
+  const span = end - start;
+  if (span <= 0) return [start];
+  const step = span > 80 ? 20 : span > 40 ? 10 : span > 20 ? 5 : span > 8 ? 2 : 1;
+  const ticks = [start];
+  let year = Math.ceil(start / step) * step;
+  while (year < end) {
+    if (year !== start) ticks.push(year);
+    year += step;
+  }
+  ticks.push(end);
+
+  if (ticks.length <= maxTicks) return ticks;
+  const compact = [start];
+  const inner = ticks.slice(1, -1);
+  const stride = Math.ceil(inner.length / Math.max(1, maxTicks - 2));
+  inner.forEach((tick, index) => {
+    if (index % stride === 0) compact.push(tick);
+  });
+  compact.push(end);
+  return compact.filter((tick, index, list) => list.indexOf(tick) === index);
 }
 
 function niceCeiling(value) {
@@ -555,6 +577,28 @@ filters.addEventListener("change", (event) => {
   loadPopularity().catch((error) => {
     document.querySelector("#chartTitle").textContent = error.message;
   });
+});
+
+yearFilters.addEventListener("submit", (event) => {
+  event.preventDefault();
+  loadPopularity().catch((error) => {
+    document.querySelector("#chartTitle").textContent = error.message;
+  });
+});
+
+yearFilters.addEventListener("change", () => {
+  loadPopularity().catch((error) => {
+    document.querySelector("#chartTitle").textContent = error.message;
+  });
+});
+
+yearFilters.addEventListener("input", () => {
+  window.clearTimeout(yearUpdateTimer);
+  yearUpdateTimer = window.setTimeout(() => {
+    loadPopularity().catch((error) => {
+      document.querySelector("#chartTitle").textContent = error.message;
+    });
+  }, 400);
 });
 
 chart.addEventListener("mousemove", showTooltip);
