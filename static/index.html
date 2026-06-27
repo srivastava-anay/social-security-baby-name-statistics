@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SSA Name Popularity</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="toolbar" aria-label="Filters">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>Name Popularity</h1>
+            <p>Social Security baby name counts, 1980-2025</p>
+          </div>
+        </div>
+
+        <form id="filters" class="filters">
+          <label class="field">
+            <span>Name or spellings</span>
+            <input id="nameInput" name="name" type="text" value="Olivia" autocomplete="off" required>
+          </label>
+
+          <label class="field">
+            <span>Region</span>
+            <select id="regionSelect" name="region">
+              <option value="national">United States</option>
+              <option value="state">State</option>
+            </select>
+          </label>
+
+          <label class="field state-field" id="stateField">
+            <span>State</span>
+            <select id="stateSelect" name="state"></select>
+          </label>
+
+          <fieldset class="mode-control">
+            <legend>Gender</legend>
+            <label>
+              <input type="radio" name="mode" value="combined" checked>
+              <span>Combined</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" value="female">
+              <span>Female</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" value="male">
+              <span>Male</span>
+            </label>
+            <label>
+              <input type="radio" name="mode" value="split">
+              <span>Separate lines</span>
+            </label>
+          </fieldset>
+
+          <button class="run-button" type="submit">Update</button>
+        </form>
+      </section>
+
+      <section class="chart-panel" aria-label="Popularity chart">
+        <div class="chart-header">
+          <div>
+            <h2 id="chartTitle">Loading...</h2>
+            <p id="chartSubtitle"></p>
+          </div>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="chart" width="1200" height="560" aria-label="Name popularity chart" role="img"></canvas>
+          <div class="tooltip" id="tooltip" hidden></div>
+        </div>
+      </section>
+
+      <section class="summary-grid" aria-label="Summary">
+        <article>
+          <span>2025 births</span>
+          <strong id="latestCount">-</strong>
+        </article>
+        <article>
+          <span>Peak</span>
+          <strong id="peakCount">-</strong>
+          <em id="peakYear">-</em>
+        </article>
+        <article class="total-card">
+          <span>1980-2025 total</span>
+          <strong id="totalCount">-</strong>
+          <div class="gender-totals" aria-label="Gender totals">
+            <span class="female-total">Girls <b id="femaleTotal">-</b></span>
+            <span class="male-total">Boys <b id="maleTotal">-</b></span>
+          </div>
+        </article>
+      </section>
+
+      <p class="source-note" id="sourceNote"></p>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
