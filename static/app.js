@@ -81,6 +81,16 @@ function selectedMode() {
   return new FormData(filters).get("mode") || "combined";
 }
 
+function selectedYearRange(form) {
+  const start = Number(form.get("startYear"));
+  const end = Number(form.get("endYear"));
+  if (!Number.isInteger(start) || !Number.isInteger(end)) throw new Error("Please choose a valid year range.");
+  if (start < START_YEAR || end > END_YEAR || start > end) {
+    throw new Error(`Please choose a year range from ${START_YEAR} to ${END_YEAR}.`);
+  }
+  return { start, end };
+}
+
 function updateRegionControls() {
   const usesState = regionSelect.value === "state";
   stateField.hidden = !usesState;
@@ -104,17 +114,19 @@ async function loadStates() {
 
 async function loadPopularity() {
   const form = new FormData(filters);
+  const yearRange = selectedYearRange(form);
   const payload = await popularityPayload({
     rawName: form.get("name"),
     region: form.get("region"),
     state: form.get("state") || "",
     mode: selectedMode(),
+    yearRange,
   });
   activePayload = payload;
   render(payload);
 }
 
-async function popularityPayload({ rawName, region, state, mode }) {
+async function popularityPayload({ rawName, region, state, mode, yearRange }) {
   const names = canonicalNames(rawName);
   if (!names.length) throw new Error("Please enter at least one name.");
   if (!["combined", "female", "male", "split"].includes(mode)) throw new Error("Unknown gender mode.");
@@ -132,10 +144,10 @@ async function popularityPayload({ rawName, region, state, mode }) {
     names,
     isAggregate: names.length > 1,
     source: region === "state" ? `${STATE_NAMES[stateCode] || stateCode} (${stateCode})` : "United States",
-    range: { start: START_YEAR, end: END_YEAR },
+    range: yearRange,
     mode,
-    lines: linesFor(counts, mode),
-    summary: summarize(counts, mode),
+    lines: linesFor(counts, mode, yearRange),
+    summary: summarize(counts, mode, yearRange),
     popularity,
     note: NOTE,
   };
@@ -280,9 +292,9 @@ function parseStateFile(text, nameKeys, counts) {
   });
 }
 
-function linesFor(counts, mode) {
+function linesFor(counts, mode, yearRange) {
   const points = [];
-  for (let year = START_YEAR; year <= END_YEAR; year += 1) {
+  for (let year = yearRange.start; year <= yearRange.end; year += 1) {
     points.push({
       year,
       female: counts[year].F,
@@ -308,9 +320,9 @@ function rowValue(row, mode) {
   return row.combined;
 }
 
-function summarize(counts, mode) {
+function summarize(counts, mode, yearRange) {
   const rows = [];
-  for (let year = START_YEAR; year <= END_YEAR; year += 1) {
+  for (let year = yearRange.start; year <= yearRange.end; year += 1) {
     const female = counts[year].F;
     const male = counts[year].M;
     rows.push({ year, female, male, combined: female + male });
@@ -344,6 +356,7 @@ function render(payload) {
   renderPopularity(payload.popularity);
   document.querySelector("#peakYear").textContent = payload.summary.hasData ? `in ${payload.summary.peak.year}` : "-";
   document.querySelector("#peakCount").textContent = numberFormat(payload.summary.peakValue);
+  document.querySelector("#totalLabel").textContent = `${payload.range.start}-${payload.range.end} total`;
   document.querySelector("#totalCount").textContent = numberFormat(payload.summary.total);
   document.querySelector("#femaleTotal").textContent = numberFormat(payload.summary.femaleTotal);
   document.querySelector("#maleTotal").textContent = numberFormat(payload.summary.maleTotal);

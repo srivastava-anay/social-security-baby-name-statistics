@@ -36,6 +36,16 @@
             <select id="stateSelect" name="state"></select>
           </label>
 
+          <label class="field compact-field">
+            <span>Start year</span>
+            <input id="startYearInput" name="startYear" type="number" min="1980" max="2025" value="1985" required>
+          </label>
+
+          <label class="field compact-field">
+            <span>End year</span>
+            <input id="endYearInput" name="endYear" type="number" min="1980" max="2025" value="2025" required>
+          </label>
+
           <fieldset class="mode-control">
             <legend>Gender</legend>
             <label>
@@ -89,7 +99,7 @@
           <em id="peakYear">-</em>
         </article>
         <article class="total-card">
-          <span>1980-2025 total</span>
+          <span id="totalLabel">1985-2025 total</span>
           <strong id="totalCount">-</strong>
           <div class="gender-totals" aria-label="Gender totals">
             <span class="female-total">Girls <b id="femaleTotal">-</b></span>
