@@ -203,10 +203,10 @@ async function stateCounts(state, nameKeys, yearRange) {
   return counts;
 }
 
-async function nationalPopularity(nameKey) {
+async function nationalPopularity(nameKey, yearRange) {
   const bySex = { F: new Map(), M: new Map() };
   await Promise.all(
-    Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, index) => START_YEAR + index).map(async (year) => {
+    Array.from({ length: yearRange.end - yearRange.start + 1 }, (_, index) => yearRange.start + index).map(async (year) => {
       const text = await fetchText(`names/yob${year}.txt`, NATIONAL_CACHE);
       addNationalRowsToPopularity(text, bySex);
     }),
@@ -214,11 +214,11 @@ async function nationalPopularity(nameKey) {
   return popularityFromMaps(bySex, nameKey);
 }
 
-async function statePopularity(state, nameKey) {
+async function statePopularity(state, nameKey, yearRange) {
   if (!STATE_NAMES[state]) throw new Error("Please choose a valid state.");
   const text = await fetchText(`namesbystate/${state}.TXT`, STATE_CACHE);
   const bySex = { F: new Map(), M: new Map() };
-  addStateRowsToPopularity(text, bySex);
+  addStateRowsToPopularity(text, bySex, yearRange);
   return popularityFromMaps(bySex, nameKey);
 }
 
@@ -230,12 +230,12 @@ function addNationalRowsToPopularity(text, bySex) {
   });
 }
 
-function addStateRowsToPopularity(text, bySex) {
+function addStateRowsToPopularity(text, bySex, yearRange) {
   text.split(/\r?\n/).forEach((line) => {
     if (!line) return;
     const [, sex, yearText, name, births] = line.split(",");
     const year = Number(yearText);
-    if (year >= START_YEAR && year <= END_YEAR) addPopularityBirths(bySex, name, sex, Number(births));
+    if (year >= yearRange.start && year <= yearRange.end) addPopularityBirths(bySex, name, sex, Number(births));
   });
 }
 
@@ -357,6 +357,7 @@ function render(payload) {
     ? `${payload.note} Comma-separated names are added together year by year.`
     : payload.note;
   renderPopularity(payload.popularity);
+  document.querySelector("#popularityLabel").textContent = `${payload.range.start}-${payload.range.end} popularity`;
   document.querySelector("#peakYear").textContent = payload.summary.hasData ? `in ${payload.summary.peak.year}` : "-";
   document.querySelector("#peakCount").textContent = numberFormat(payload.summary.peakValue);
   document.querySelector("#totalLabel").textContent = `${payload.range.start}-${payload.range.end} total`;
@@ -373,8 +374,8 @@ async function loadPopularityRanking(payload) {
     return;
   }
   const popularity = payload.region === "state"
-    ? await statePopularity(payload.state, payload.nameKeys[0])
-    : await nationalPopularity(payload.nameKeys[0]);
+    ? await statePopularity(payload.state, payload.nameKeys[0], payload.range)
+    : await nationalPopularity(payload.nameKeys[0], payload.range);
   if (activePayload !== payload) return;
   payload.popularity = popularity;
   renderPopularity(popularity);

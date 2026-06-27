@@ -70,7 +70,7 @@
             <form id="yearFilters" class="year-filters" aria-label="Year range">
               <label class="field compact-field">
                 <span>Start year</span>
-                <input id="startYearInput" name="startYear" type="number" min="1910" max="2025" value="1985" required>
+                <input id="startYearInput" name="startYear" type="number" min="1910" max="2025" value="1910" required>
               </label>
               <label class="field compact-field">
                 <span>End year</span>
@@ -88,8 +88,8 @@
 
       <section class="summary-grid" aria-label="Summary">
         <article id="popularityCard">
-          <span>All-time popularity</span>
-          <div class="popularity-lines" id="popularityDetails" aria-label="All-time popularity by gender">
+          <span id="popularityLabel">1910-2025 popularity</span>
+          <div class="popularity-lines" id="popularityDetails" aria-label="Popularity by gender">
             <span class="female-total">Girls <b id="femalePopularity">-</b></span>
             <span class="male-total">Boys <b id="malePopularity">-</b></span>
           </div>
@@ -101,7 +101,7 @@
           <em id="peakYear">-</em>
         </article>
         <article class="total-card">
-          <span id="totalLabel">1985-2025 total</span>
+          <span id="totalLabel">1910-2025 total</span>
           <strong id="totalCount">-</strong>
           <div class="gender-totals" aria-label="Gender totals">
             <span class="female-total">Girls <b id="femaleTotal">-</b></span>
