@@ -272,7 +272,7 @@ canvas {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 18px;
 }
@@ -306,25 +306,34 @@ canvas {
   font-weight: 800;
 }
 
-.total-card {
-  grid-column: span 2;
+.summary-grid .not-applicable {
+  margin-top: 14px;
+  font-size: 18px;
+  line-height: 1.2;
 }
 
-.gender-totals {
+.summary-grid [hidden] {
+  display: none;
+}
+
+.gender-totals,
+.popularity-lines {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 18px;
   margin-top: 12px;
 }
 
-.gender-totals span {
+.gender-totals span,
+.popularity-lines span {
   display: inline-flex;
   gap: 6px;
   align-items: baseline;
   font-size: 13px;
 }
 
-.gender-totals b {
+.gender-totals b,
+.popularity-lines b {
   font-size: 18px;
   line-height: 1;
 }
@@ -370,10 +379,6 @@ canvas {
   .filters,
   .summary-grid {
     grid-template-columns: 1fr;
-  }
-
-  .total-card {
-    grid-column: auto;
   }
 
   .mode-control,

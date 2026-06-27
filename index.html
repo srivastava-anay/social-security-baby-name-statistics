@@ -75,9 +75,13 @@
       </section>
 
       <section class="summary-grid" aria-label="Summary">
-        <article>
-          <span>2025 births</span>
-          <strong id="latestCount">-</strong>
+        <article id="popularityCard">
+          <span>All-time popularity</span>
+          <div class="popularity-lines" id="popularityDetails" aria-label="All-time popularity by gender">
+            <span class="female-total">Girls <b id="femalePopularity">-</b></span>
+            <span class="male-total">Boys <b id="malePopularity">-</b></span>
+          </div>
+          <em class="not-applicable" id="popularityNotApplicable" hidden>Not applicable for multiple names</em>
         </article>
         <article>
           <span>Peak</span>

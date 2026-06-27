@@ -122,6 +122,11 @@ async function popularityPayload({ rawName, region, state, mode }) {
   const nameKeys = names.map((name) => name.toLowerCase());
   const stateCode = state.toUpperCase();
   const counts = region === "state" ? await stateCounts(stateCode, nameKeys) : await nationalCounts(nameKeys);
+  const popularity = names.length > 1
+    ? { multipleNames: true }
+    : region === "state"
+      ? await statePopularity(stateCode, nameKeys[0])
+      : await nationalPopularity(nameKeys[0]);
   return {
     name: names.join(", "),
     names,
@@ -131,6 +136,7 @@ async function popularityPayload({ rawName, region, state, mode }) {
     mode,
     lines: linesFor(counts, mode),
     summary: summarize(counts, mode),
+    popularity,
     note: NOTE,
   };
 }
@@ -180,6 +186,66 @@ async function stateCounts(state, nameKeys) {
   const text = await fetchText(`namesbystate/${state}.TXT`, STATE_CACHE);
   parseStateFile(text, keySet, counts);
   return counts;
+}
+
+async function nationalPopularity(nameKey) {
+  const bySex = { F: new Map(), M: new Map() };
+  await Promise.all(
+    Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, index) => START_YEAR + index).map(async (year) => {
+      const text = await fetchText(`names/yob${year}.txt`, NATIONAL_CACHE);
+      addNationalRowsToPopularity(text, bySex);
+    }),
+  );
+  return popularityFromMaps(bySex, nameKey);
+}
+
+async function statePopularity(state, nameKey) {
+  if (!STATE_NAMES[state]) throw new Error("Please choose a valid state.");
+  const text = await fetchText(`namesbystate/${state}.TXT`, STATE_CACHE);
+  const bySex = { F: new Map(), M: new Map() };
+  addStateRowsToPopularity(text, bySex);
+  return popularityFromMaps(bySex, nameKey);
+}
+
+function addNationalRowsToPopularity(text, bySex) {
+  text.split(/\r?\n/).forEach((line) => {
+    if (!line) return;
+    const [name, sex, births] = line.split(",");
+    addPopularityBirths(bySex, name, sex, Number(births));
+  });
+}
+
+function addStateRowsToPopularity(text, bySex) {
+  text.split(/\r?\n/).forEach((line) => {
+    if (!line) return;
+    const [, sex, yearText, name, births] = line.split(",");
+    const year = Number(yearText);
+    if (year >= START_YEAR && year <= END_YEAR) addPopularityBirths(bySex, name, sex, Number(births));
+  });
+}
+
+function addPopularityBirths(bySex, name, sex, births) {
+  if (!name || !["F", "M"].includes(sex)) return;
+  const key = name.toLowerCase();
+  bySex[sex].set(key, (bySex[sex].get(key) || 0) + births);
+}
+
+function popularityFromMaps(bySex, nameKey) {
+  return {
+    multipleNames: false,
+    female: popularityForSex(bySex.F, nameKey),
+    male: popularityForSex(bySex.M, nameKey),
+  };
+}
+
+function popularityForSex(countsByName, nameKey) {
+  const totalNames = countsByName.size;
+  const births = countsByName.get(nameKey) || 0;
+  if (!births) return { rank: null, totalNames, births: 0 };
+  const higherCounts = new Set(
+    Array.from(countsByName.values()).filter((value) => value > births),
+  );
+  return { rank: higherCounts.size + 1, totalNames, births };
 }
 
 async function fetchText(path, cache) {
@@ -275,7 +341,7 @@ function render(payload) {
   document.querySelector("#sourceNote").textContent = payload.isAggregate
     ? `${payload.note} Comma-separated names are added together year by year.`
     : payload.note;
-  document.querySelector("#latestCount").textContent = numberFormat(payload.summary.latestValue);
+  renderPopularity(payload.popularity);
   document.querySelector("#peakYear").textContent = payload.summary.hasData ? `in ${payload.summary.peak.year}` : "-";
   document.querySelector("#peakCount").textContent = numberFormat(payload.summary.peakValue);
   document.querySelector("#totalCount").textContent = numberFormat(payload.summary.total);
@@ -283,6 +349,21 @@ function render(payload) {
   document.querySelector("#maleTotal").textContent = numberFormat(payload.summary.maleTotal);
   renderLegend(payload);
   drawChart(payload);
+}
+
+function renderPopularity(popularity) {
+  const card = document.querySelector("#popularityCard");
+  card.classList.toggle("is-not-applicable", popularity.multipleNames);
+  document.querySelector("#popularityDetails").hidden = popularity.multipleNames;
+  document.querySelector("#popularityNotApplicable").hidden = !popularity.multipleNames;
+  if (popularity.multipleNames) return;
+  document.querySelector("#femalePopularity").textContent = popularityText(popularity.female);
+  document.querySelector("#malePopularity").textContent = popularityText(popularity.male);
+}
+
+function popularityText(entry) {
+  if (!entry.births) return "-";
+  return `#${numberFormat(entry.rank)} of ${numberFormat(entry.totalNames)}`;
 }
 
 function renderLegend(payload) {
